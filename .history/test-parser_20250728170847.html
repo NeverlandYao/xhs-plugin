@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据解析器测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-html {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .test-result {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        .test-error {
+            background: #ffeaea;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>小红书数据解析器测试</h1>
+        <p>测试更新后的数据解析器是否能正确解析新的HTML结构</p>
+        
+        <button onclick="runTest()">运行测试</button>
+        <button onclick="clearResults()">清除结果</button>
+        
+        <div class="test-html">
+            <h3>测试HTML结构：</h3>
+            <pre id="testHtml"></pre>
+        </div>
+        
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        // 模拟Chrome扩展环境
+        if (!window.chrome) {
+            window.chrome = {
+                runtime: {
+                    onMessage: {
+                        addListener: function() {}
+                    }
+                }
+            };
+        }
+    </script>
+    <script src="utils/data-parser.js"></script>
+    <script>
+        // 测试HTML结构
+        const testHtmlStructure = `
+<section data-v-a264b01a="" data-v-330d9cca="" class="note-item" data-width="1440" data-height="1920" data-index="0" style="--68479076: 12px; --1bd4d75c: 284px; --1e4add76: blur(42.5px); transform: translate(0px, 0px);">
+    <div data-v-a264b01a="">
+        <a data-v-a264b01a="" href="/explore/6866607700000000230057fe" style="display: none;"></a>
+        <a data-v-a264b01a="" class="cover mask ld" target="_self" href="/explore/6866607700000000230057fe?xsec_token=ABFC7Pl_ruZApLwwf6cgkrVG039cQRSO90REFdwx7kgUg=&amp;xsec_source=" style="height: 379px;">
+            <img data-v-a264b01a="" src="https://sns-webpic-qc.xhscdn.com/202507281647/e4cd4d3f228769c5b9d426b475be4a74/notes_pre_post/1040g3k831jfldmn730705pp3kac736dvl3kjasg!nc_n_webp_mw_1" fetchpriority="auto" loading="lazy" decoding="async" data-xhs-img="" elementtiming="card-exposed" style="width: 100%; height: 100%; object-fit: cover;">
+        </a>
+        <div data-v-a264b01a="" class="footer">
+            <a data-v-a264b01a="" target="_self" class="title">
+                <span data-v-51ec0135="" data-v-a264b01a="">还要不要办五年签</span>
+            </a>
+            <div data-v-a264b01a="" class="author-wrapper">
+                <a data-v-a264b01a="" href="/user/profile/6723a298000000001c0199bf?channel_type=explore_feed&amp;parent_page_channel_type=web_profile_board&amp;xsec_token=AB3ub60JhPwTFGit7oFvs9_Pxgtsr46gtqf1UJ5k2rxtY=&amp;xsec_source=pc_feed" class="author" target="_self">
+                    <img data-v-a264b01a="" src="https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31ibbr42e0a0g5pp3kac736dv8knk0co?imageView2/2/w/60/format/webp|imageMogr2/strip" fetchpriority="auto" width="20" height="20" crossorigin="anonymous" loading="lazy" decoding="async" data-xhs-img="" class="author-avatar">
+                    <span data-v-a264b01a="" class="name">memory</span>
+                </a>
+                <span data-v-dc3a3972="" data-v-a264b01a="" class="like-wrapper like-active">
+                    <span data-v-dc3a3972="" class="like-lottie" style="width: 16px; height: 16px;"></span>
+                    <svg data-v-55b36ac6="" data-v-dc3a3972="" class="reds-icon like-icon" width="16" height="16">
+                        <use data-v-55b36ac6="" xlink:href="#like"></use>
+                    </svg>
+                    <span data-v-dc3a3972="" class="count" selected-disabled-search="">114</span>
+                </span>
+            </div>
+        </div>
+    </div>
+</section>`;
+
+        function runTest() {
+            try {
+                // 显示测试HTML
+                document.getElementById('testHtml').textContent = testHtmlStructure;
+                
+                // 创建临时容器
+                const tempContainer = document.createElement('div');
+                tempContainer.innerHTML = testHtmlStructure;
+                document.body.appendChild(tempContainer);
+                
+                // 初始化数据解析器
+                const parser = new DataParserUtils();
+                
+                // 测试查找笔记项
+                const noteItems = parser.findNoteItems();
+                addResult('查找笔记项', `找到 ${noteItems.length} 个笔记项`, 'success');
+                
+                if (noteItems.length > 0) {
+                    const noteItem = noteItems[0];
+                    
+                    // 测试解析数据
+                    const settings = {
+                        collectTitle: true,
+                        collectAuthor: true,
+                        collectStats: true,
+                        collectImages: true,
+                        debug: true
+                    };
+                    
+                    const noteData = parser.parseNoteData(noteItem, settings);
+                    
+                    if (noteData) {
+                        addResult('解析笔记数据', JSON.stringify(noteData, null, 2), 'success');
+                        
+                        // 验证数据
+                        const isValid = parser.validateNoteData(noteData);
+                        addResult('数据验证', isValid ? '数据有效' : '数据无效', isValid ? 'success' : 'error');
+                        
+                        // 测试各个字段
+                        testField('URL', noteData.url);
+                        testField('标题', noteData.title);
+                        testField('作者', noteData.author);
+                        testField('点赞数', noteData.likes);
+                        testField('图片URL', noteData.imageUrl);
+                        
+                    } else {
+                        addResult('解析笔记数据', '解析失败', 'error');
+                    }
+                } else {
+                    addResult('测试结果', '未找到笔记项，可能选择器需要调整', 'error');
+                }
+                
+                // 清理临时容器
+                document.body.removeChild(tempContainer);
+                
+            } catch (error) {
+                addResult('测试错误', error.message, 'error');
+                console.error('测试失败:', error);
+            }
+        }
+        
+        function testField(fieldName, value) {
+            const hasValue = value !== null && value !== undefined && value !== '';
+            const status = hasValue ? 'success' : 'error';
+            const message = hasValue ? `${value}` : '未提取到数据';
+            addResult(`${fieldName}提取`, message, status);
+        }
+        
+        function addResult(title, content, type) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = type === 'success' ? 'test-result' : 'test-error';
+            resultDiv.innerHTML = `
+                <h4>${title}</h4>
+                <pre>${content}</pre>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('testHtml').textContent = '';
+        }
+        
+        // 页面加载完成后显示测试HTML
+        window.addEventListener('load', function() {
+            document.getElementById('testHtml').textContent = testHtmlStructure;
+        });
+    </script>
+</body>
+</html>

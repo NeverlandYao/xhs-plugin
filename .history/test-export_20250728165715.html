@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .btn {
+            background: #ff2442;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #e01e3c;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .data-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .data-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .data-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Excel导出功能测试</h1>
+        
+        <div class="test-section">
+            <h3>🔧 修复内容</h3>
+            <ul>
+                <li>✅ 添加UTF-8 BOM头，确保Excel正确识别中文字符</li>
+                <li>✅ 改进错误处理机制，提供详细的错误信息</li>
+                <li>✅ 增加下载权限检查</li>
+                <li>✅ 优化MIME类型设置</li>
+                <li>✅ 添加详细的控制台日志</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 测试数据</h3>
+            <div class="data-preview" id="testData">
+                <!-- 测试数据将在这里显示 -->
+            </div>
+            <button class="btn" onclick="generateTestData()">生成测试数据</button>
+            <button class="btn" onclick="clearTestData()">清除数据</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📤 导出测试</h3>
+            <p>点击下面的按钮测试不同格式的导出功能：</p>
+            <button class="btn" onclick="testExport('csv')">测试CSV导出</button>
+            <button class="btn" onclick="testExport('json')">测试JSON导出</button>
+            <button class="btn" onclick="testExport('excel')">测试Excel导出</button>
+            
+            <div id="exportResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔍 调试信息</h3>
+            <button class="btn" onclick="checkPermissions()">检查权限</button>
+            <button class="btn" onclick="checkStorage()">检查存储</button>
+            <button class="btn" onclick="clearLogs()">清除日志</button>
+            
+            <div id="debugInfo" class="result info" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟Chrome扩展环境
+        if (!window.chrome) {
+            window.chrome = {
+                runtime: {
+                    onMessage: {
+                        addListener: function() {}
+                    },
+                    sendMessage: function(message, callback) {
+                        console.log('模拟发送消息:', message);
+                        // 模拟异步响应
+                        setTimeout(() => {
+                            if (callback) {
+                                callback({
+                                    success: true,
+                                    message: '模拟导出成功'
+                                });
+                            }
+                        }, 1000);
+                    },
+                    lastError: null
+                },
+                storage: {
+                    local: {
+                        get: function(keys, callback) {
+                            const data = JSON.parse(localStorage.getItem('testData') || '{}');
+                            callback(data);
+                        },
+                        set: function(data, callback) {
+                            localStorage.setItem('testData', JSON.stringify(data));
+                            if (callback) callback();
+                        }
+                    }
+                },
+                downloads: {
+                    download: function(options, callback) {
+                        console.log('模拟下载:', options);
+                        // 创建实际的下载
+                        const link = document.createElement('a');
+                        link.href = options.url;
+                        link.download = options.filename;
+                        link.click();
+                        if (callback) callback(Date.now());
+                    }
+                }
+            };
+        }
+
+        // 生成测试数据
+        function generateTestData() {
+            const testData = [
+                {
+                    title: '测试笔记标题1 - 包含中文字符',
+                    author: '测试作者1',
+                    likes: 123,
+                    collects: 45,
+                    comments: 67,
+                    imageUrl: 'https://example.com/image1.jpg',
+                    url: 'https://xiaohongshu.com/explore/test1',
+                    timestamp: Date.now() - 3600000
+                },
+                {
+                    title: '另一个测试笔记 - 特殊字符 "引号" & 符号',
+                    author: '作者二号',
+                    likes: 456,
+                    collects: 78,
+                    comments: 90,
+                    imageUrl: 'https://example.com/image2.jpg',
+                    url: 'https://xiaohongshu.com/explore/test2',
+                    timestamp: Date.now() - 7200000
+                },
+                {
+                    title: '第三个测试内容，包含换行\n和逗号，测试CSV转义',
+                    author: '第三作者',
+                    likes: 789,
+                    collects: 12,
+                    comments: 34,
+                    imageUrl: 'https://example.com/image3.jpg',
+                    url: 'https://xiaohongshu.com/explore/test3',
+                    timestamp: Date.now()
+                }
+            ];
+            
+            // 保存到模拟存储
+            chrome.storage.local.set({ collectedData: testData });
+            
+            // 显示数据
+            displayTestData(testData);
+            showResult('生成了 ' + testData.length + ' 条测试数据', 'success');
+        }
+        
+        function displayTestData(data) {
+            const container = document.getElementById('testData');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="color: #666;">暂无测试数据</div>';
+                return;
+            }
+            
+            const html = data.map((item, index) => `
+                <div class="data-item">
+                    <strong>${index + 1}. ${item.title}</strong><br>
+                    <small>作者: ${item.author} | 点赞: ${item.likes} | 时间: ${new Date(item.timestamp).toLocaleString()}</small>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        function clearTestData() {
+            chrome.storage.local.set({ collectedData: [] });
+            document.getElementById('testData').innerHTML = '<div style="color: #666;">暂无测试数据</div>';
+            showResult('测试数据已清除', 'info');
+        }
+        
+        // 测试导出功能
+        function testExport(format) {
+            chrome.storage.local.get(['collectedData'], (data) => {
+                const collectedData = data.collectedData || [];
+                
+                if (collectedData.length === 0) {
+                    showResult('没有测试数据，请先生成测试数据', 'error');
+                    return;
+                }
+                
+                showResult(`正在测试${format.toUpperCase()}导出...`, 'info');
+                
+                // 模拟导出处理
+                try {
+                    let content, filename, mimeType;
+                    
+                    switch (format) {
+                        case 'csv':
+                            content = convertToCSV(collectedData);
+                            filename = `测试数据_${new Date().toISOString().slice(0,19).replace(/[T:]/g, '-')}.csv`;
+                            mimeType = 'text/csv;charset=utf-8';
+                            break;
+                        case 'json':
+                            content = JSON.stringify({
+                                exportTime: new Date().toISOString(),
+                                totalCount: collectedData.length,
+                                data: collectedData
+                            }, null, 2);
+                            filename = `测试数据_${new Date().toISOString().slice(0,19).replace(/[T:]/g, '-')}.json`;
+                            mimeType = 'application/json;charset=utf-8';
+                            break;
+                        case 'excel':
+                            // 添加UTF-8 BOM
+                            const bom = '\uFEFF';
+                            content = bom + convertToCSV(collectedData);
+                            filename = `测试数据_${new Date().toISOString().slice(0,19).replace(/[T:]/g, '-')}.xlsx`;
+                            mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8';
+                            break;
+                    }
+                    
+                    // 创建下载
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 1000);
+                    
+                    showResult(`${format.toUpperCase()}导出成功！\n文件名: ${filename}\n数据量: ${collectedData.length} 条\nMIME类型: ${mimeType}`, 'success');
+                    
+                } catch (error) {
+                    showResult(`${format.toUpperCase()}导出失败: ${error.message}`, 'error');
+                }
+            });
+        }
+        
+        // CSV转换函数
+        function convertToCSV(data) {
+            const headers = ['序号', '标题', '作者', '点赞数', '收藏数', '评论数', '图片链接', '笔记链接', '采集时间'];
+            
+            const rows = data.map((item, index) => [
+                index + 1,
+                escapeCsvValue(item.title || ''),
+                escapeCsvValue(item.author || ''),
+                item.likes || 0,
+                item.collects || 0,
+                item.comments || 0,
+                escapeCsvValue(item.imageUrl || ''),
+                escapeCsvValue(item.url || ''),
+                new Date(item.timestamp).toLocaleString()
+            ]);
+            
+            const csvLines = [headers, ...rows];
+            return csvLines.map(row => row.join(',')).join('\n');
+        }
+        
+        function escapeCsvValue(value) {
+            if (typeof value !== 'string') {
+                value = String(value);
+            }
+            
+            if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                value = '"' + value.replace(/"/g, '""') + '"';
+            }
+            
+            return value;
+        }
+        
+        // 检查权限
+        function checkPermissions() {
+            let info = '权限检查结果:\n';
+            info += `chrome.downloads: ${chrome.downloads ? '✅ 可用' : '❌ 不可用'}\n`;
+            info += `chrome.storage: ${chrome.storage ? '✅ 可用' : '❌ 不可用'}\n`;
+            info += `chrome.runtime: ${chrome.runtime ? '✅ 可用' : '❌ 不可用'}\n`;
+            
+            showDebugInfo(info);
+        }
+        
+        // 检查存储
+        function checkStorage() {
+            chrome.storage.local.get(['collectedData'], (data) => {
+                const collectedData = data.collectedData || [];
+                let info = '存储检查结果:\n';
+                info += `数据条数: ${collectedData.length}\n`;
+                info += `存储大小: ${JSON.stringify(data).length} 字符\n`;
+                info += `最后更新: ${collectedData.length > 0 ? new Date(collectedData[collectedData.length - 1].timestamp).toLocaleString() : '无数据'}\n`;
+                
+                showDebugInfo(info);
+            });
+        }
+        
+        function showResult(message, type) {
+            const resultEl = document.getElementById('exportResult');
+            resultEl.textContent = message;
+            resultEl.className = `result ${type}`;
+            resultEl.style.display = 'block';
+        }
+        
+        function showDebugInfo(message) {
+            const debugEl = document.getElementById('debugInfo');
+            debugEl.textContent = message;
+            debugEl.style.display = 'block';
+        }
+        
+        function clearLogs() {
+            document.getElementById('exportResult').style.display = 'none';
+            document.getElementById('debugInfo').style.display = 'none';
+        }
+        
+        // 页面加载时检查现有数据
+        window.addEventListener('load', () => {
+            if (chrome && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.get(['collectedData'], (data) => {
+                    const collectedData = data.collectedData || [];
+                    if (collectedData.length > 0) {
+                        displayTestData(collectedData);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>插件UI测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .test-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+    </style>
+    <link rel="stylesheet" href="popup/popup.css">
+</head>
+<body>
+    <div class="test-container">
+        <div class="container">
+            <header class="header">
+                <h1>小红书数据爬虫插件 v1.0</h1>
+            </header>
+            
+            <section class="status-section">
+                <div class="status-item">
+                    <span class="status-label">状态:</span>
+                    <span id="status" class="status-value stopped">待启动</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">已采集:</span>
+                    <span id="count" class="status-value">0 条数据</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">运行时间:</span>
+                    <span id="runtime" class="status-value">00:00:00</span>
+                </div>
+            </section>
+            
+            <section class="control-section">
+                <button id="startBtn" class="btn btn-primary">开始采集</button>
+                <button id="pauseBtn" class="btn btn-secondary" disabled>暂停</button>
+                <button id="stopBtn" class="btn btn-danger" disabled>停止</button>
+                <button id="settingsBtn" class="btn btn-settings">设置</button>
+            </section>
+            
+            <section class="preview-section">
+                <h3>数据预览</h3>
+                <div id="dataPreview" class="data-preview">
+                    <div class="no-data">暂无数据</div>
+                </div>
+            </section>
+            
+            <section class="export-section">
+                <button id="exportCsv" class="btn btn-export" disabled>导出CSV</button>
+                <button id="exportJson" class="btn btn-export" disabled>导出JSON</button>
+                <button id="exportExcel" class="btn btn-export" disabled>导出Excel</button>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

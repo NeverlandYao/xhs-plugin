@@ -1,0 +1,370 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    min-height: 100vh;
+}
+
+.container {
+    width: 320px;
+    min-height: 480px;
+    max-height: 600px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.header {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 16px;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.status-section {
+    padding: 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.status-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.status-value {
+    font-weight: 600;
+}
+
+.status-value.stopped {
+    color: #dc3545;
+}
+
+.status-value.running {
+    color: #28a745;
+}
+
+.status-value.paused {
+    color: #ffc107;
+}
+
+.control-section {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #545b62;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c82333;
+}
+
+.btn-settings {
+    background: #17a2b8;
+    color: white;
+    grid-column: span 2;
+}
+
+.btn-settings:hover:not(:disabled) {
+    background: #138496;
+}
+
+.preview-section {
+    padding: 16px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.preview-section h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.data-preview {
+    max-height: 100px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+}
+
+.no-data {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.data-item {
+    background: white;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
+    border-left: 3px solid #007bff;
+}
+
+.data-item:last-child {
+    margin-bottom: 0;
+}
+
+.data-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.data-meta {
+    color: #666;
+    font-size: 11px;
+}
+
+.export-section {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.btn-export {
+    background: #28a745;
+    color: white;
+    font-size: 12px;
+    padding: 8px 12px;
+}
+
+.btn-export:hover:not(:disabled) {
+    background: #1e7e34;
+}
+
+.settings-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.settings-panel.hidden {
+    display: none;
+}
+
+.settings-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.settings-content h3 {
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+.setting-group {
+    margin-bottom: 20px;
+}
+
+.setting-group h4 {
+    font-size: 14px;
+    color: #495057;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.setting-item {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.setting-item label {
+    font-size: 13px;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.setting-item input,
+.setting-item select {
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+.setting-item input[type="checkbox"] {
+    min-width: auto;
+    margin: 0;
+}
+
+.settings-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.settings-buttons .btn {
+    flex: 1;
+    max-width: 100px;
+}
+
+/* 滚动条样式 */
+.data-preview::-webkit-scrollbar,
+.settings-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.data-preview::-webkit-scrollbar-track,
+.settings-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.data-preview::-webkit-scrollbar-thumb,
+.settings-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.data-preview::-webkit-scrollbar-thumb:hover,
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.data-item {
+    animation: fadeIn 0.3s ease;
+}
+
+/* 响应式设计 */
+@media (max-width: 350px) {
+    .container {
+        width: 300px;
+        min-height: 450px;
+        border-radius: 6px;
+    }
+    
+    .header {
+        padding: 12px;
+    }
+    
+    .status-section,
+    .control-section,
+    .preview-section,
+    .export-section {
+        padding: 12px;
+    }
+    
+    .control-section {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .btn-settings {
+        grid-column: span 1;
+    }
+    
+    .export-section {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .data-preview {
+        max-height: 80px;
+        padding: 6px;
+    }
+}
