@@ -29,6 +29,7 @@ class PopupController {
         this.exportCsvBtn = document.getElementById('exportCsv');
         this.exportJsonBtn = document.getElementById('exportJson');
         this.exportExcelBtn = document.getElementById('exportExcel');
+        this.clearDataBtn = document.getElementById('clearData');
         
         // 数据预览
         this.dataPreview = document.getElementById('dataPreview');
@@ -50,6 +51,7 @@ class PopupController {
         this.exportCsvBtn.addEventListener('click', () => this.exportData('csv'));
         this.exportJsonBtn.addEventListener('click', () => this.exportData('json'));
         this.exportExcelBtn.addEventListener('click', () => this.exportData('excel'));
+        this.clearDataBtn.addEventListener('click', () => this.clearData());
         
         // 设置面板事件
         this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
@@ -69,9 +71,7 @@ class PopupController {
     
     async checkCurrentTab() {
         if (!this.isExtensionEnvironment()) {
-            // 测试环境，显示模拟状态
             this.showWarning('当前为测试环境，部分功能可能无法正常使用');
-            this.simulateTestData();
             return;
         }
         
@@ -94,29 +94,7 @@ class PopupController {
         }
     }
     
-    simulateTestData() {
-        // 在测试环境中模拟一些数据
-        const testData = [
-            {
-                url: 'https://www.xiaohongshu.com/explore/test1',
-                title: '测试笔记1',
-                author: '测试用户1',
-                likes: 100,
-                timestamp: Date.now() - 3600000
-            },
-            {
-                url: 'https://www.xiaohongshu.com/explore/test2',
-                title: '测试笔记2',
-                author: '测试用户2',
-                likes: 200,
-                timestamp: Date.now() - 1800000
-            }
-        ];
-        
-        this.updateDataPreview(testData);
-        this.dataCount = testData.length;
-        this.updateUI();
-    }
+
     
     async requestStatus() {
         try {
@@ -133,13 +111,7 @@ class PopupController {
     
     async startCollection() {
         if (!this.isExtensionEnvironment()) {
-            // 测试环境模拟采集
-            this.showSuccess('测试环境：模拟开始采集');
-            this.isRunning = true;
-            this.isPaused = false;
-            this.startTime = Date.now();
-            this.startTimer();
-            this.updateUI();
+            this.showWarning('当前为测试环境，部分功能可能无法正常使用');
             return;
         }
         
@@ -186,17 +158,7 @@ class PopupController {
     
     async pauseCollection() {
         if (!this.isExtensionEnvironment()) {
-            // 测试环境模拟暂停/恢复
-            if (this.isPaused) {
-                this.showSuccess('测试环境：模拟恢复采集');
-                this.isPaused = false;
-                this.startTimer();
-            } else {
-                this.showSuccess('测试环境：模拟暂停采集');
-                this.isPaused = true;
-                this.stopTimer();
-            }
-            this.updateUI();
+            this.showWarning('当前为测试环境，部分功能可能无法正常使用');
             return;
         }
         
@@ -223,12 +185,7 @@ class PopupController {
     
     async stopCollection() {
         if (!this.isExtensionEnvironment()) {
-            // 测试环境模拟停止
-            this.showSuccess('测试环境：模拟停止采集');
-            this.isRunning = false;
-            this.isPaused = false;
-            this.stopTimer();
-            this.updateUI();
+            this.showWarning('当前为测试环境，部分功能可能无法正常使用');
             return;
         }
         
@@ -248,8 +205,7 @@ class PopupController {
     
     async exportData(format) {
         if (!this.isExtensionEnvironment()) {
-            // 测试环境模拟导出
-            this.showSuccess(`测试环境：模拟导出${format.toUpperCase()}格式数据`);
+            this.showWarning('当前为测试环境，部分功能可能无法正常使用');
             return;
         }
         
@@ -257,10 +213,20 @@ class PopupController {
             const data = await chrome.storage.local.get(['collectedData']);
             const collectedData = data.collectedData || [];
             
+            console.log(`准备导出 ${collectedData.length} 条数据:`, collectedData.slice(0, 2));
+            
+            // 验证数据格式
+            if (!Array.isArray(collectedData)) {
+                this.showError('数据格式错误：不是数组');
+                return;
+            }
+            
             if (collectedData.length === 0) {
                 this.showError('没有可导出的数据');
                 return;
             }
+            
+            console.log(`开始导出${format.toUpperCase()}格式，数据量:`, collectedData.length);
             
             // 发送导出请求到background script
             chrome.runtime.sendMessage({
@@ -268,15 +234,27 @@ class PopupController {
                 format: format,
                 data: collectedData
             }, (response) => {
+                // 检查runtime错误
+                if (chrome.runtime.lastError) {
+                    console.error('Chrome runtime error:', chrome.runtime.lastError);
+                    this.showError(`导出失败: ${chrome.runtime.lastError.message}`);
+                    return;
+                }
+                
+                console.log('导出响应:', response);
+                
                 if (response && response.success) {
+                    console.log('导出成功:', response);
                     this.showSuccess(`成功导出 ${collectedData.length} 条数据`);
                 } else {
-                    this.showError('导出失败');
+                    const errorMsg = response && response.error ? response.error : '未知错误';
+                    console.error('导出失败:', errorMsg);
+                    this.showError(`导出失败: ${errorMsg}`);
                 }
             });
         } catch (error) {
-            console.error('导出数据失败:', error);
-            this.showError('导出失败');
+            console.error('导出数据异常:', error);
+            this.showError(`导出失败: ${error.message}`);
         }
     }
     
@@ -437,9 +415,6 @@ class PopupController {
             
             if (this.isExtensionEnvironment()) {
                 await chrome.storage.sync.set({ settings });
-            } else {
-                // 测试环境使用localStorage
-                localStorage.setItem('xhs-plugin-settings', JSON.stringify(settings));
             }
             
             this.hideSettings();
@@ -467,13 +442,50 @@ class PopupController {
                 const result = await chrome.storage.sync.get(['settings']);
                 return result.settings || defaultSettings;
             } else {
-                // 测试环境使用localStorage
-                const stored = localStorage.getItem('xhs-plugin-settings');
-                return stored ? JSON.parse(stored) : defaultSettings;
+                return defaultSettings;
             }
         } catch (error) {
             console.error('获取设置失败:', error);
             return defaultSettings;
+        }
+    }
+    
+    async clearData() {
+        try {
+            // 确认对话框
+            if (!confirm('确定要清除所有采集的数据吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            if (this.isExtensionEnvironment()) {
+                // 清除chrome.storage中的数据
+                await chrome.storage.local.remove(['collectedData']);
+                
+                // 通知content script清除数据
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tab && tab.url.includes('xiaohongshu.com')) {
+                    chrome.tabs.sendMessage(tab.id, { action: 'clearData' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            console.log('Content script未响应，这是正常的');
+                        }
+                    });
+                }
+            }
+            
+            // 清除模拟数据
+            if (typeof window.mockCollectedData !== 'undefined') {
+                window.mockCollectedData = [];
+            }
+            
+            // 重置UI状态
+            this.dataCount = 0;
+            this.updateDataPreview([]);
+            this.updateUI();
+            
+            this.showSuccess('数据已清除');
+        } catch (error) {
+            console.error('清除数据失败:', error);
+            this.showError('清除数据失败');
         }
     }
     

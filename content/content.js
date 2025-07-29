@@ -95,6 +95,11 @@ class XHSDataCollector {
                 this.stopCollection();
                 sendResponse({ success: true });
                 break;
+            case 'clearData':
+                console.log('清除数据');
+                this.clearData();
+                sendResponse({ success: true });
+                break;
             default:
                 console.log('未知消息类型:', message.action);
                 sendResponse({ success: false, error: '未知操作' });
@@ -273,6 +278,23 @@ class XHSDataCollector {
             await chrome.storage.local.set({ collectedData: this.collectedData });
         } catch (error) {
             console.error('保存数据失败:', error);
+        }
+    }
+    
+    async clearData() {
+        try {
+            // 清除内存中的数据
+            this.collectedData = [];
+            
+            // 清除存储中的数据
+            await chrome.storage.local.remove(['collectedData']);
+            
+            // 发送状态更新
+            this.sendStatusUpdate();
+            
+            console.log('数据已清除');
+        } catch (error) {
+            console.error('清除数据失败:', error);
         }
     }
     
@@ -466,9 +488,12 @@ class DataParser {
                 '.image img'
             ],
             link: [
+                'a.cover[href*="/search_result/"]',
+                'a[href*="/search_result/"]',
                 'a.cover[href*="/explore/"]',
                 'a[href*="/explore/"]',
-                'a[href*="/discovery/"]'
+                'a[href*="/discovery/"]',
+                'a[href*="/note/"]'
             ]
         };
     }
@@ -654,9 +679,17 @@ class DataParser {
         if (!url) return null;
         
         try {
-            const urlObj = new URL(url, window.location.origin);
-            return urlObj.href;
+            // 如果已经是完整URL，直接返回
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            
+            // 如果是相对URL，转换为小红书的绝对URL
+            const baseUrl = 'https://www.xiaohongshu.com';
+            const absoluteUrl = new URL(url, baseUrl);
+            return absoluteUrl.href;
         } catch (error) {
+            console.warn('URL标准化失败:', url, error);
             return url;
         }
     }

@@ -37,6 +37,7 @@ class DataParserUtils {
             
             // 作者选择器
             authors: [
+                '.author .name span',
                 '.author-wrapper .author .name',
                 '.author .name',
                 '.author-wrapper .name',
@@ -71,13 +72,25 @@ class DataParserUtils {
                 '.media img'
             ],
             
-            // 链接选择器
+            // 链接选择器（优先匹配带参数的完整链接）
             links: [
+                'a.cover[href*="/search_result/"]',
+                'a[href*="/search_result/"]',
                 'a.cover[href*="/explore/"]',
                 'a[href*="/explore/"]',
                 'a[href*="/discovery/"]',
                 'a[href*="/note/"]',
                 '.note-link'
+            ],
+            
+            // 时间选择器
+            times: [
+                '.time span',
+                '.time',
+                '.publish-time',
+                '.date',
+                '[class*="time"]',
+                '[class*="date"]'
             ]
         };
         
@@ -188,6 +201,7 @@ class DataParserUtils {
                 collects: null,
                 comments: null,
                 imageUrl: null,
+                publishTime: null,
                 rawElement: null // 用于调试
             };
             
@@ -216,6 +230,10 @@ class DataParserUtils {
             
             if (settings.collectImages !== false) {
                 noteData.imageUrl = this.extractImageUrl(noteElement);
+            }
+            
+            if (settings.collectTime !== false) {
+                noteData.publishTime = this.extractTime(noteElement);
             }
             
             // 在开发模式下保存原始元素引用
@@ -356,6 +374,44 @@ class DataParserUtils {
     }
     
     /**
+     * 提取发布时间
+     * @param {Element} element 笔记元素
+     * @returns {string|null} 发布时间
+     */
+    extractTime(element) {
+        for (const selector of this.selectors.times) {
+            const timeElement = element.querySelector(selector);
+            if (timeElement && timeElement.textContent.trim()) {
+                const timeText = this.cleanText(timeElement.textContent);
+                // 验证时间格式
+                if (this.isValidTimeFormat(timeText)) {
+                    return timeText;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 验证时间格式
+     * @param {string} timeText 时间文本
+     * @returns {boolean} 是否为有效时间格式
+     */
+    isValidTimeFormat(timeText) {
+        // 常见的时间格式模式
+        const timePatterns = [
+            /^\d{4}-\d{1,2}-\d{1,2}$/, // 2024-12-14
+            /^\d{1,2}-\d{1,2}$/, // 12-14
+            /^\d{1,2}月\d{1,2}日$/, // 12月14日
+            /^\d+[分时天]前$/, // 3分前, 2小时前, 1天前
+            /^昨天|今天|前天$/, // 昨天, 今天, 前天
+            /^\d{4}\/\d{1,2}\/\d{1,2}$/ // 2024/12/14
+        ];
+        
+        return timePatterns.some(pattern => pattern.test(timeText));
+    }
+    
+    /**
      * 从文本中提取数字
      * @param {string} text 包含数字的文本
      * @returns {number|null} 提取的数字
@@ -402,8 +458,14 @@ class DataParserUtils {
         if (!url) return null;
         
         try {
-            // 如果是相对URL，转换为绝对URL
-            const absoluteUrl = new URL(url, window.location.origin);
+            // 如果已经是完整URL，直接返回
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            
+            // 如果是相对URL，转换为小红书的绝对URL
+            const baseUrl = 'https://www.xiaohongshu.com';
+            const absoluteUrl = new URL(url, baseUrl);
             return absoluteUrl.href;
         } catch (error) {
             console.warn('URL标准化失败:', url, error);

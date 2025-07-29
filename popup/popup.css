@@ -195,8 +195,13 @@ body {
 .export-section {
     padding: 16px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+}
+
+.export-section .btn-warning {
+    grid-column: span 2;
+    margin-top: 8px;
 }
 
 .btn-export {
@@ -208,6 +213,19 @@ body {
 
 .btn-export:hover:not(:disabled) {
     background: #1e7e34;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+    font-size: 12px;
+    padding: 8px 12px;
+    font-weight: 600;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #e0a800;
+    color: #212529;
 }
 
 .settings-panel {
