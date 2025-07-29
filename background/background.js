@@ -78,9 +78,13 @@ class BackgroundService {
     async handleMessage(message, sender, sendResponse) {
         try {
             switch (message.action) {
+                case 'ping':
+                    // 用于测试扩展连接状态
+                    sendResponse({ success: true, message: 'pong' });
+                    return false; // 同步响应
                 case 'exportData':
-                    await this.handleExportData(message, sendResponse);
-                    break;
+                    this.handleExportData(message, sendResponse);
+                    return true; // 保持异步消息通道开放
                 case 'clearData':
                     await this.handleClearData(sendResponse);
                     break;
@@ -94,11 +98,19 @@ class BackgroundService {
             console.error('处理消息失败:', error);
             sendResponse({ success: false, error: error.message });
         }
+        return true; // 保持异步消息通道开放
     }
     
     async handleExportData(message, sendResponse) {
         try {
+            console.log('开始处理导出请求:', message);
             const { format, data } = message;
+            
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                throw new Error('没有可导出的数据');
+            }
+            
+            console.log(`准备导出 ${data.length} 条数据为 ${format} 格式`);
             const exportHandler = new ExportHandler();
             
             let result;
@@ -116,6 +128,7 @@ class BackgroundService {
                     throw new Error('不支持的导出格式');
             }
             
+            console.log('导出处理完成:', result);
             sendResponse({ success: true, ...result });
         } catch (error) {
             console.error('导出数据失败:', error);
@@ -225,6 +238,7 @@ class ExportHandler {
             '评论数',
             '图片链接',
             '笔记链接',
+            '发布时间',
             '采集时间'
         ];
         
@@ -238,6 +252,7 @@ class ExportHandler {
             item.comments || 0,
             this.escapeCsvValue(item.imageUrl || ''),
             this.escapeCsvValue(item.url || ''),
+            this.escapeCsvValue(item.publishTime || ''),
             this.formatDate(item.timestamp)
         ]);
         
@@ -278,9 +293,56 @@ class ExportHandler {
     
     async downloadFile(content, filename, mimeType) {
         try {
-            // 创建Blob
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
+            console.log('开始下载文件，环境检查:');
+            console.log('- chrome.downloads:', !!chrome.downloads);
+            console.log('- URL:', typeof URL);
+            console.log('- URL.createObjectURL:', typeof URL?.createObjectURL);
+            console.log('- Blob:', typeof Blob);
+            console.log('- btoa:', typeof btoa);
+            
+            // 检查downloads API是否可用
+            if (!chrome.downloads) {
+                throw new Error('Downloads API 不可用');
+            }
+            
+            let url;
+            let needsCleanup = false;
+            
+            // 尝试使用Blob URL（推荐方式）
+            if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function' && typeof Blob !== 'undefined') {
+                try {
+                    const blob = new Blob([content], { type: mimeType });
+                    url = URL.createObjectURL(blob);
+                    needsCleanup = true;
+                    console.log(`使用Blob URL下载文件: ${filename}, 大小: ${blob.size} bytes`);
+                } catch (blobError) {
+                    console.warn('Blob URL创建失败，尝试备用方案:', blobError);
+                    url = null;
+                }
+            }
+            
+            // 备用方案：使用Data URL
+            if (!url) {
+                try {
+                    if (typeof btoa === 'undefined') {
+                        throw new Error('btoa函数不可用');
+                    }
+                    
+                    // 将内容转换为base64
+                    const base64Content = btoa(unescape(encodeURIComponent(content)));
+                    url = `data:${mimeType};base64,${base64Content}`;
+                    console.log(`使用Data URL下载文件: ${filename}, 内容长度: ${content.length}`);
+                } catch (dataError) {
+                    console.error('Data URL创建失败:', dataError);
+                    throw new Error(`无法创建下载URL: ${dataError.message}`);
+                }
+            }
+            
+            if (!url) {
+                throw new Error('无法创建有效的下载URL');
+            }
+            
+            console.log(`准备使用Chrome下载API，URL类型: ${url.startsWith('data:') ? 'Data URL' : 'Blob URL'}`);
             
             // 使用Chrome下载API
             const downloadId = await chrome.downloads.download({
@@ -289,13 +351,24 @@ class ExportHandler {
                 saveAs: true
             });
             
-            // 清理URL
-            setTimeout(() => {
-                URL.revokeObjectURL(url);
-            }, 1000);
+            console.log(`下载开始，ID: ${downloadId}`);
             
-            return downloadId;
+            // 清理Blob URL（如果使用了的话）
+            if (needsCleanup) {
+                setTimeout(() => {
+                    try {
+                        URL.revokeObjectURL(url);
+                        console.log('Blob URL已清理');
+                    } catch (e) {
+                        console.warn('清理URL失败:', e);
+                    }
+                }, 1000);
+            }
+            
+            return { downloadId, filename };
         } catch (error) {
+            console.error('下载文件详细错误:', error);
+            console.error('错误堆栈:', error.stack);
             throw new Error(`文件下载失败: ${error.message}`);
         }
     }
