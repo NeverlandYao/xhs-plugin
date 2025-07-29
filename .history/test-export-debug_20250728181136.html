@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出功能调试测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .export-buttons button {
+            flex: 1;
+            min-width: 120px;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .data-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .data-preview {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        .data-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>导出功能调试测试</h1>
+        
+        <div class="test-section">
+            <h3>环境检测</h3>
+            <div id="envStatus" class="status info">检测中...</div>
+            <button onclick="checkEnvironment()">重新检测</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>测试数据管理</h3>
+            <div id="dataStatus" class="status info">未初始化</div>
+            <div class="data-info">
+                <div>数据条数: <span id="dataCount">0</span></div>
+                <div>数据大小: <span id="dataSize">0 KB</span></div>
+            </div>
+            <button onclick="generateTestData()">生成测试数据</button>
+            <button onclick="loadExistingData()">加载现有数据</button>
+            <button onclick="clearTestData()">清空数据</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>数据预览</h3>
+            <div id="dataPreview" class="data-preview">暂无数据</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>导出功能测试</h3>
+            <div id="exportStatus" class="status info">准备就绪</div>
+            <div class="export-buttons">
+                <button onclick="testExport('csv')" id="csvBtn">导出CSV</button>
+                <button onclick="testExport('json')" id="jsonBtn">导出JSON</button>
+                <button onclick="testExport('excel')" id="excelBtn">导出Excel</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>权限检测</h3>
+            <div id="permissionStatus" class="status info">未检测</div>
+            <button onclick="checkPermissions()">检查权限</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>调试日志</h3>
+            <div id="debugLog" class="log">等待日志...</div>
+            <button onclick="clearLog()">清空日志</button>
+        </div>
+    </div>
+
+    <script>
+        let logContainer = document.getElementById('debugLog');
+        let testData = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logContainer.textContent += logEntry;
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+        
+        function clearLog() {
+            logContainer.textContent = '';
+        }
+        
+        function checkEnvironment() {
+            log('开始环境检测...');
+            
+            if (typeof chrome === 'undefined') {
+                updateStatus('envStatus', '❌ Chrome扩展API不可用', 'error');
+                log('Chrome扩展API不可用');
+                return false;
+            }
+            
+            if (!chrome.runtime) {
+                updateStatus('envStatus', '❌ Chrome runtime不可用', 'error');
+                log('Chrome runtime不可用');
+                return false;
+            }
+            
+            if (!chrome.storage) {
+                updateStatus('envStatus', '❌ Chrome storage不可用', 'error');
+                log('Chrome storage不可用');
+                return false;
+            }
+            
+            updateStatus('envStatus', '✅ 扩展环境正常', 'success');
+            log('扩展环境检测通过');
+            return true;
+        }
+        
+        function generateTestData() {
+            log('生成测试数据...');
+            
+            testData = [];
+            for (let i = 1; i <= 10; i++) {
+                testData.push({
+                    title: `测试笔记标题 ${i}`,
+                    author: `测试作者${i}`,
+                    likes: Math.floor(Math.random() * 1000),
+                    collects: Math.floor(Math.random() * 500),
+                    comments: Math.floor(Math.random() * 200),
+                    imageUrl: `https://example.com/image${i}.jpg`,
+                    url: `https://xiaohongshu.com/note/test${i}`,
+                    timestamp: Date.now() - (i * 3600000)
+                });
+            }
+            
+            // 保存到storage
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({ collectedData: testData }, () => {
+                    if (chrome.runtime.lastError) {
+                        log('保存测试数据失败: ' + chrome.runtime.lastError.message);
+                        updateStatus('dataStatus', '❌ 保存失败', 'error');
+                    } else {
+                        log('测试数据保存成功');
+                        updateDataInfo();
+                        updateDataPreview();
+                        updateStatus('dataStatus', '✅ 测试数据已生成', 'success');
+                    }
+                });
+            } else {
+                updateDataInfo();
+                updateDataPreview();
+                updateStatus('dataStatus', '✅ 测试数据已生成（仅内存）', 'warning');
+            }
+        }
+        
+        function loadExistingData() {
+            log('加载现有数据...');
+            
+            if (typeof chrome === 'undefined' || !chrome.storage) {
+                updateStatus('dataStatus', '❌ 无法访问存储', 'error');
+                return;
+            }
+            
+            chrome.storage.local.get(['collectedData'], (result) => {
+                if (chrome.runtime.lastError) {
+                    log('加载数据失败: ' + chrome.runtime.lastError.message);
+                    updateStatus('dataStatus', '❌ 加载失败', 'error');
+                } else {
+                    testData = result.collectedData || [];
+                    log(`加载了 ${testData.length} 条数据`);
+                    updateDataInfo();
+                    updateDataPreview();
+                    
+                    if (testData.length > 0) {
+                        updateStatus('dataStatus', `✅ 已加载 ${testData.length} 条数据`, 'success');
+                    } else {
+                        updateStatus('dataStatus', '⚠️ 没有现有数据', 'warning');
+                    }
+                }
+            });
+        }
+        
+        function clearTestData() {
+            log('清空测试数据...');
+            
+            testData = [];
+            
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({ collectedData: [] }, () => {
+                    if (chrome.runtime.lastError) {
+                        log('清空数据失败: ' + chrome.runtime.lastError.message);
+                    } else {
+                        log('数据已清空');
+                        updateDataInfo();
+                        updateDataPreview();
+                        updateStatus('dataStatus', '✅ 数据已清空', 'success');
+                    }
+                });
+            } else {
+                updateDataInfo();
+                updateDataPreview();
+                updateStatus('dataStatus', '✅ 数据已清空', 'success');
+            }
+        }
+        
+        function updateDataInfo() {
+            document.getElementById('dataCount').textContent = testData.length;
+            const dataSize = JSON.stringify(testData).length;
+            document.getElementById('dataSize').textContent = (dataSize / 1024).toFixed(2) + ' KB';
+        }
+        
+        function updateDataPreview() {
+            const preview = document.getElementById('dataPreview');
+            
+            if (testData.length === 0) {
+                preview.innerHTML = '暂无数据';
+                return;
+            }
+            
+            const previewHtml = testData.slice(0, 5).map((item, index) => `
+                <div class="data-item">
+                    <strong>${index + 1}.</strong> ${item.title} - ${item.author} 
+                    (👍${item.likes} 💖${item.collects} 💬${item.comments})
+                </div>
+            `).join('');
+            
+            preview.innerHTML = previewHtml;
+        }
+        
+        function testExport(format) {
+            log(`开始测试导出 ${format.toUpperCase()} 格式...`);
+            
+            if (!checkEnvironment()) {
+                return;
+            }
+            
+            if (testData.length === 0) {
+                updateStatus('exportStatus', '❌ 没有数据可导出', 'error');
+                log('没有数据可导出，请先生成或加载数据');
+                return;
+            }
+            
+            updateStatus('exportStatus', `🔄 正在导出 ${format.toUpperCase()}...`, 'info');
+            
+            // 禁用按钮
+            document.getElementById('csvBtn').disabled = true;
+            document.getElementById('jsonBtn').disabled = true;
+            document.getElementById('excelBtn').disabled = true;
+            
+            chrome.runtime.sendMessage({
+                action: 'exportData',
+                format: format,
+                data: testData
+            }, (response) => {
+                // 重新启用按钮
+                document.getElementById('csvBtn').disabled = false;
+                document.getElementById('jsonBtn').disabled = false;
+                document.getElementById('excelBtn').disabled = false;
+                
+                log('导出响应: ' + JSON.stringify(response));
+                
+                if (chrome.runtime.lastError) {
+                    const error = chrome.runtime.lastError.message;
+                    log('Runtime错误: ' + error);
+                    updateStatus('exportStatus', `❌ 导出失败: ${error}`, 'error');
+                } else if (response && response.success) {
+                    log(`导出成功: ${response.filename}`);
+                    updateStatus('exportStatus', `✅ ${format.toUpperCase()} 导出成功`, 'success');
+                } else {
+                    const errorMsg = response && response.error ? response.error : '未知错误';
+                    log('导出失败: ' + errorMsg);
+                    updateStatus('exportStatus', `❌ 导出失败: ${errorMsg}`, 'error');
+                }
+            });
+        }
+        
+        function checkPermissions() {
+            log('检查权限...');
+            
+            if (typeof chrome === 'undefined') {
+                updateStatus('permissionStatus', '❌ Chrome API不可用', 'error');
+                return;
+            }
+            
+            const permissions = [];
+            
+            // 检查storage权限
+            if (chrome.storage) {
+                permissions.push('✅ storage');
+            } else {
+                permissions.push('❌ storage');
+            }
+            
+            // 检查downloads权限
+            if (chrome.downloads) {
+                permissions.push('✅ downloads');
+            } else {
+                permissions.push('❌ downloads');
+            }
+            
+            // 检查runtime权限
+            if (chrome.runtime) {
+                permissions.push('✅ runtime');
+            } else {
+                permissions.push('❌ runtime');
+            }
+            
+            const permissionText = permissions.join(', ');
+            log('权限检查结果: ' + permissionText);
+            
+            const hasAllPermissions = permissions.every(p => p.startsWith('✅'));
+            updateStatus('permissionStatus', permissionText, hasAllPermissions ? 'success' : 'error');
+        }
+        
+        // 页面加载完成后自动检测
+        document.addEventListener('DOMContentLoaded', () => {
+            log('页面加载完成，开始自动检测...');
+            checkEnvironment();
+            checkPermissions();
+            loadExistingData();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小红书数据爬虫插件</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>小红书数据爬虫插件 v1.0</h1>
+        </header>
+        
+        <section class="status-section">
+            <div class="status-item">
+                <span class="status-label">状态:</span>
+                <span id="status" class="status-value stopped">待启动</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">已采集:</span>
+                <span id="count" class="status-value">0 条数据</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">运行时间:</span>
+                <span id="runtime" class="status-value">00:00:00</span>
+            </div>
+        </section>
+        
+        <section class="control-section">
+            <button id="startBtn" class="btn btn-primary">开始采集</button>
+            <button id="pauseBtn" class="btn btn-secondary" disabled>暂停</button>
+            <button id="stopBtn" class="btn btn-danger" disabled>停止</button>
+            <button id="settingsBtn" class="btn btn-settings">设置</button>
+        </section>
+        
+        <section class="preview-section">
+            <h3>数据预览</h3>
+            <div id="dataPreview" class="data-preview">
+                <div class="no-data">暂无数据</div>
+            </div>
+        </section>
+        
+        <section class="export-section">
+            <button id="exportCsv" class="btn btn-export" disabled>导出CSV</button>
+            <button id="exportJson" class="btn btn-export" disabled>导出JSON</button>
+            <button id="exportExcel" class="btn btn-export" disabled>导出Excel</button>
+        </section>
+        
+        <!-- 设置面板 -->
+        <div id="settingsPanel" class="settings-panel hidden">
+            <div class="settings-content">
+                <h3>设置</h3>
+                
+                <div class="setting-group">
+                    <h4>滚动设置</h4>
+                    <div class="setting-item">
+                        <label for="scrollSpeed">滚动速度:</label>
+                        <select id="scrollSpeed">
+                            <option value="1">慢速</option>
+                            <option value="5" selected>中速</option>
+                            <option value="10">快速</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="scrollInterval">滚动间隔(秒):</label>
+                        <input type="number" id="scrollInterval" min="1" max="10" value="3">
+                    </div>
+                    <div class="setting-item">
+                        <label for="maxScrolls">最大滚动次数:</label>
+                        <input type="number" id="maxScrolls" min="10" max="1000" value="100">
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="smartStop" checked>
+                            智能停止
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-group">
+                    <h4>数据设置</h4>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="autoStart">
+                            自动开始采集
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="collectTitle" checked>
+                            采集标题
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="collectAuthor" checked>
+                            采集作者
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="collectStats" checked>
+                            采集统计数据
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="collectImages" checked>
+                            采集图片链接
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-buttons">
+                    <button id="saveSettings" class="btn btn-primary">保存</button>
+                    <button id="cancelSettings" class="btn btn-secondary">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

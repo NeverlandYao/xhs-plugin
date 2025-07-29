@@ -15,38 +15,26 @@ class XHSDataCollector {
     }
     
     async init() {
-        try {
-            // 等待页面完全加载
-            if (document.readyState !== 'complete') {
-                await new Promise(resolve => {
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', resolve);
-                    } else {
-                        window.addEventListener('load', resolve);
-                    }
-                });
-            }
-            
-            // 初始化模块
-            this.scrollManager = new ScrollManager();
-            this.dataParser = new DataParser();
-            
-            // 加载已保存的数据
-            await this.loadSavedData();
-            
-            // 监听消息
-            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-                this.handleMessage(message, sender, sendResponse);
-                return true; // 保持消息通道开放
+        // 等待页面完全加载
+        if (document.readyState !== 'complete') {
+            await new Promise(resolve => {
+                window.addEventListener('load', resolve);
             });
-            
-            // 发送初始化完成信号
-            this.sendMessage('contentScriptReady');
-            
-            console.log('小红书数据采集器已初始化，页面URL:', window.location.href);
-        } catch (error) {
-            console.error('初始化失败:', error);
         }
+        
+        // 初始化模块
+        this.scrollManager = new ScrollManager();
+        this.dataParser = new DataParser();
+        
+        // 加载已保存的数据
+        await this.loadSavedData();
+        
+        // 监听消息
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            this.handleMessage(message, sender, sendResponse);
+        });
+        
+        console.log('小红书数据采集器已初始化');
     }
     
     async loadSavedData() {

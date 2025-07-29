@@ -87,8 +87,9 @@ class PopupController {
                 this.showWarning('建议在搜索结果页面使用此插件');
             }
             
-            // 获取当前状态
+            // 获取当前状态和页面信息
             this.requestStatus();
+            this.requestPageInfo();
         } catch (error) {
             console.error('检查当前标签页失败:', error);
         }
@@ -122,12 +123,41 @@ class PopupController {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             chrome.tabs.sendMessage(tab.id, { action: 'getStatus' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('获取状态失败:', chrome.runtime.lastError);
+                    this.showWarning('无法连接到页面，请刷新页面后重试');
+                    return;
+                }
+                
                 if (response) {
                     this.updateStatus(response);
+                } else {
+                    console.log('未收到状态响应');
                 }
             });
         } catch (error) {
             console.error('获取状态失败:', error);
+        }
+    }
+    
+    async requestPageInfo() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            chrome.tabs.sendMessage(tab.id, { action: 'getPageInfo' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('获取页面信息失败:', chrome.runtime.lastError);
+                    return;
+                }
+                
+                if (response) {
+                    console.log('页面信息:', response);
+                    if (response.noteCount !== undefined) {
+                        this.showSuccess(`检测到 ${response.noteCount} 个笔记项`);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('获取页面信息失败:', error);
         }
     }
     
@@ -254,13 +284,20 @@ class PopupController {
         }
         
         try {
+            console.log(`开始导出${format}格式数据...`);
+            
             const data = await chrome.storage.local.get(['collectedData']);
             const collectedData = data.collectedData || [];
             
+            console.log(`获取到数据:`, collectedData.length, '条');
+            
             if (collectedData.length === 0) {
-                this.showError('没有可导出的数据');
+                this.showError('没有可导出的数据，请先采集数据');
                 return;
             }
+            
+            // 显示导出中状态
+            this.showNotification('正在导出数据，请稍候...', 'info');
             
             // 发送导出请求到background script
             chrome.runtime.sendMessage({
@@ -268,15 +305,26 @@ class PopupController {
                 format: format,
                 data: collectedData
             }, (response) => {
+                console.log('导出响应:', response);
+                
+                if (chrome.runtime.lastError) {
+                    console.error('Runtime错误:', chrome.runtime.lastError);
+                    this.showError(`导出失败: ${chrome.runtime.lastError.message}`);
+                    return;
+                }
+                
                 if (response && response.success) {
-                    this.showSuccess(`成功导出 ${collectedData.length} 条数据`);
+                    this.showSuccess(`成功导出 ${collectedData.length} 条数据为 ${format.toUpperCase()} 格式`);
+                    console.log('导出成功:', response.filename);
                 } else {
-                    this.showError('导出失败');
+                    const errorMsg = response && response.error ? response.error : '未知错误';
+                    this.showError(`导出失败: ${errorMsg}`);
+                    console.error('导出失败:', errorMsg);
                 }
             });
         } catch (error) {
-            console.error('导出数据失败:', error);
-            this.showError('导出失败');
+            console.error('导出数据异常:', error);
+            this.showError(`导出异常: ${error.message}`);
         }
     }
     

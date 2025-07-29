@@ -145,42 +145,25 @@ class PopupController {
         
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            
-            if (!tab.url.includes('xiaohongshu.com')) {
-                this.showError('请在小红书页面使用此插件');
-                return;
-            }
-            
             const settings = await this.getSettings();
-            console.log('发送开始采集消息，设置:', settings);
             
             chrome.tabs.sendMessage(tab.id, {
                 action: 'startCollection',
                 settings: settings
             }, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error('消息发送失败:', chrome.runtime.lastError);
-                    this.showError('无法连接到页面，请刷新页面后重试');
-                    return;
-                }
-                
-                console.log('收到响应:', response);
-                
                 if (response && response.success) {
                     this.isRunning = true;
                     this.isPaused = false;
                     this.startTime = Date.now();
                     this.startTimer();
                     this.updateUI();
-                    this.showSuccess('采集已开始');
                 } else {
-                    const errorMsg = response ? response.error : '启动采集失败';
-                    this.showError(errorMsg);
+                    this.showError('启动采集失败');
                 }
             });
         } catch (error) {
             console.error('启动采集失败:', error);
-            this.showError('启动采集失败: ' + error.message);
+            this.showError('启动采集失败');
         }
     }
     
@@ -413,6 +396,7 @@ class PopupController {
             document.getElementById('scrollInterval').value = settings.scrollInterval;
             document.getElementById('maxScrolls').value = settings.maxScrolls;
             document.getElementById('smartStop').checked = settings.smartStop;
+            document.getElementById('autoStart').checked = settings.autoStart;
             document.getElementById('collectTitle').checked = settings.collectTitle;
             document.getElementById('collectAuthor').checked = settings.collectAuthor;
             document.getElementById('collectStats').checked = settings.collectStats;

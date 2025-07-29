@@ -15,38 +15,26 @@ class XHSDataCollector {
     }
     
     async init() {
-        try {
-            // 等待页面完全加载
-            if (document.readyState !== 'complete') {
-                await new Promise(resolve => {
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', resolve);
-                    } else {
-                        window.addEventListener('load', resolve);
-                    }
-                });
-            }
-            
-            // 初始化模块
-            this.scrollManager = new ScrollManager();
-            this.dataParser = new DataParser();
-            
-            // 加载已保存的数据
-            await this.loadSavedData();
-            
-            // 监听消息
-            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-                this.handleMessage(message, sender, sendResponse);
-                return true; // 保持消息通道开放
+        // 等待页面完全加载
+        if (document.readyState !== 'complete') {
+            await new Promise(resolve => {
+                window.addEventListener('load', resolve);
             });
-            
-            // 发送初始化完成信号
-            this.sendMessage('contentScriptReady');
-            
-            console.log('小红书数据采集器已初始化，页面URL:', window.location.href);
-        } catch (error) {
-            console.error('初始化失败:', error);
         }
+        
+        // 初始化模块
+        this.scrollManager = new ScrollManager();
+        this.dataParser = new DataParser();
+        
+        // 加载已保存的数据
+        await this.loadSavedData();
+        
+        // 监听消息
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            this.handleMessage(message, sender, sendResponse);
+        });
+        
+        console.log('小红书数据采集器已初始化');
     }
     
     async loadSavedData() {
@@ -424,12 +412,7 @@ class DataParser {
                 '.note-item',
                 '.feeds-page .note-item',
                 '.search-page .note-item',
-                'section[class*="note"]',
-                'div[class*="note-item"]',
-                'div[class*="card"]',
-                'a[href*="/explore/"]',
-                '.waterfall-item',
-                '.masonry-item'
+                'section[class*="note"]'
             ],
             title: [
                 '.footer .title span',
@@ -492,7 +475,6 @@ class DataParser {
     }
     
     findNoteItems() {
-        // 首先尝试标准选择器
         for (const selector of this.selectors.noteItems) {
             const items = document.querySelectorAll(selector);
             if (items.length > 0) {
@@ -501,43 +483,27 @@ class DataParser {
             }
         }
         
-        // 如果没有找到，尝试智能检测
+        // 如果没有找到，尝试通用选择器
         console.log('使用智能检测模式查找笔记项');
-        
-        // 方法1: 查找包含小红书链接的元素
-        const linkItems = document.querySelectorAll('a[href*="/explore/"]');
-        if (linkItems.length > 0) {
-            console.log(`通过链接找到 ${linkItems.length} 个笔记项`);
-            return Array.from(linkItems).map(link => {
-                // 返回包含链接的最近的容器元素
-                let container = link;
-                while (container.parentElement && !container.parentElement.querySelector('a[href*="/explore/"]:not([href="' + link.href + '"])')) {
-                    container = container.parentElement;
-                    if (container.tagName === 'SECTION' || container.classList.contains('item') || container.classList.contains('card')) {
-                        break;
-                    }
-                }
-                return container;
-            });
-        }
-        
-        // 方法2: 通用检测
-        const fallbackItems = document.querySelectorAll('section, article, div[class*="item"], div[class*="card"], div[class*="note"]');
-        const validItems = Array.from(fallbackItems).filter(item => {
-            const hasLink = item.querySelector('a[href*="/explore/"], a[href*="/discovery/"]');
-            const hasImage = item.querySelector('img');
-            const hasText = item.textContent.trim().length > 10;
+        const fallbackItems = document.querySelectorAll('section, article, .item, [class*="card"]');
+        return Array.from(fallbackItems).filter(item => {
+            // 检查是否为section.note-item
+            if (item.tagName === 'SECTION' && item.classList.contains('note-item')) {
+                return true;
+            }
             
-            // 检查是否有Vue组件特征
+            const hasLink = item.querySelector('a[href*="/explore/"], a.cover');
+            const hasImage = item.querySelector('img');
+            const hasTitle = item.querySelector('.title, .footer .title');
+            const hasAuthor = item.querySelector('.author, .name');
+            
+            // 检查是否有data-v-*属性（Vue组件特征）
             const hasVueData = Array.from(item.attributes).some(attr => 
-                attr.name.startsWith('data-v-') || attr.name.startsWith('data-')
+                attr.name.startsWith('data-v-')
             );
             
-            return hasLink && hasImage && hasText && hasVueData;
+            return hasLink && hasImage && (hasTitle || hasAuthor) && hasVueData;
         });
-        
-        console.log(`智能检测找到 ${validItems.length} 个笔记项`);
-        return validItems;
     }
     
     parseNoteItem(item, settings) {

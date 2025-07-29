@@ -68,6 +68,11 @@ class XHSDataCollector {
                 console.log('返回状态:', status);
                 sendResponse(status);
                 break;
+            case 'getPageInfo':
+                const pageInfo = this.getPageInfo();
+                console.log('返回页面信息:', pageInfo);
+                sendResponse(pageInfo);
+                break;
             case 'startCollection':
                 console.log('开始采集，设置:', message.settings);
                 this.startCollection(message.settings)
@@ -108,6 +113,27 @@ class XHSDataCollector {
             dataCount: this.collectedData.length,
             startTime: this.startTime
         };
+    }
+    
+    getPageInfo() {
+        try {
+            const noteItems = this.dataParser.findNoteItems();
+            return {
+                noteCount: noteItems.length,
+                pageUrl: window.location.href,
+                pageTitle: document.title,
+                readyState: document.readyState
+            };
+        } catch (error) {
+            console.error('获取页面信息失败:', error);
+            return {
+                noteCount: 0,
+                pageUrl: window.location.href,
+                pageTitle: document.title,
+                readyState: document.readyState,
+                error: error.message
+            };
+        }
     }
     
     async startCollection(settings) {

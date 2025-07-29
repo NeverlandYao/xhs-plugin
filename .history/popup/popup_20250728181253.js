@@ -87,8 +87,9 @@ class PopupController {
                 this.showWarning('建议在搜索结果页面使用此插件');
             }
             
-            // 获取当前状态
+            // 获取当前状态和页面信息
             this.requestStatus();
+            this.requestPageInfo();
         } catch (error) {
             console.error('检查当前标签页失败:', error);
         }
@@ -122,12 +123,41 @@ class PopupController {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             chrome.tabs.sendMessage(tab.id, { action: 'getStatus' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('获取状态失败:', chrome.runtime.lastError);
+                    this.showWarning('无法连接到页面，请刷新页面后重试');
+                    return;
+                }
+                
                 if (response) {
                     this.updateStatus(response);
+                } else {
+                    console.log('未收到状态响应');
                 }
             });
         } catch (error) {
             console.error('获取状态失败:', error);
+        }
+    }
+    
+    async requestPageInfo() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            chrome.tabs.sendMessage(tab.id, { action: 'getPageInfo' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('获取页面信息失败:', chrome.runtime.lastError);
+                    return;
+                }
+                
+                if (response) {
+                    console.log('页面信息:', response);
+                    if (response.noteCount !== undefined) {
+                        this.showSuccess(`检测到 ${response.noteCount} 个笔记项`);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('获取页面信息失败:', error);
         }
     }
     
